@@ -53,3 +53,6 @@ if uploaded_file:
 
     st.subheader("Descriptive Statistics")
     st.write(df_filtered[['raw_value', 'initial_projection', 'latest_projection']].describe())
+
+    st.subheader("Filtered Data")
+    st.dataframe(df_filtered[['time', 'raw_value', 'initial_projection', 'latest_projection']])
