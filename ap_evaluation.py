@@ -55,4 +55,4 @@ if uploaded_file:
     st.write(df_filtered[['raw_value', 'initial_projection', 'latest_projection']].describe())
 
     st.subheader("Filtered Data")
-    st.dataframe(df_filtered[['time', 'raw_value', 'initial_projection', 'latest_projection']])
+    st.dataframe(df_filtered[['time', 'level', 'location', 'raw_value', 'initial_projection', 'latest_projection']])
