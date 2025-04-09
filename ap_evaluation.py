@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import matplotlib.dates as mdates
+import plotly.graph_objects as go
 
 st.sidebar.header("Upload Your Data")
 uploaded_file = st.sidebar.file_uploader("Upload CSV file", type=["csv"])
@@ -13,8 +11,8 @@ if uploaded_file:
     df['date'] = pd.to_datetime(df['date'], errors='coerce')
     df = df[df['date'].notna()]
     df = df.sort_values(by='date')
-    st.sidebar.success("File uploaded successfully!")
 
+    st.sidebar.success("File uploaded successfully!")
     st.sidebar.header("Select Filters")
 
     level = st.sidebar.selectbox("Select Level", df['level'].dropna().unique())
@@ -22,38 +20,51 @@ if uploaded_file:
     location = st.sidebar.selectbox("Select Location", available_locations)
 
     df_filtered = df[
-        (df['level'] == level) &
+        (df['level'] == level) & 
         (df['location'] == location)
     ].copy()
-
     df_filtered = df_filtered.sort_values(by='date')
 
-    min_date = df_filtered['date'].min()
-    max_date = df_filtered['date'].max()
+    min_date = df_filtered['date'].min().date()
+    max_date = df_filtered['date'].max().date()
+
     date_range = st.sidebar.date_input("Select Date Range", value=(min_date, max_date), min_value=min_date, max_value=max_date)
 
     if isinstance(date_range, tuple) and len(date_range) == 2:
         start_date, end_date = date_range
-        df_filtered = df_filtered[(df_filtered['date'] >= pd.to_datetime(start_date)) & (df_filtered['date'] <= pd.to_datetime(end_date))]
+        df_filtered = df_filtered[
+            (df_filtered['date'] >= pd.to_datetime(start_date)) &
+            (df_filtered['date'] <= pd.to_datetime(end_date))
+        ]
 
     st.header(f"Adaptive Projection for {location}")
 
-    fig, ax = plt.subplots(figsize=(14, 6))
-    sns.lineplot(data=df_filtered, x='date', y='raw_value', label='Raw Value', color='blue', ax=ax)
-    sns.lineplot(data=df_filtered, x='date', y='initial_projection', label='Initial Projection', color='orange', ax=ax)
-    sns.lineplot(data=df_filtered, x='date', y='latest_projection', label='Latest Projection', color='green', ax=ax)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df_filtered['date'], y=df_filtered['raw_value'],
+                             mode='lines', name='Raw Value', line=dict(color='blue')))
+    fig.add_trace(go.Scatter(x=df_filtered['date'], y=df_filtered['initial_projection'],
+                             mode='lines', name='Initial Projection', line=dict(color='orange')))
+    fig.add_trace(go.Scatter(x=df_filtered['date'], y=df_filtered['latest_projection'],
+                             mode='lines', name='Latest Projection', line=dict(color='green')))
 
-    ax.set_xticks(df_filtered['date'])
-    ax.set_xticklabels(df_filtered['date'].dt.strftime('%Y-%m-%d'), rotation=45, ha='right')
-    ax.set_xlim(df_filtered['date'].min(), df_filtered['date'].max())
+    fig.update_layout(
+        title=f"Payload Adaptive Projection for {location}",
+        xaxis_title="Date",
+        yaxis_title="Payload (TByte)",
+        hovermode="x unified",
+        xaxis=dict(
+            tickformat="%Y-%m-%d",
+            showspikes=True,
+            spikemode="across",
+            spikecolor="grey",
+            spikesnap="cursor",
+            showline=True
+        ),
+        height=500,
+        margin=dict(t=50, b=40),
+    )
 
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Payload (TByte)")
-    ax.set_title(f"Payload Adaptive Projection for {location}")
-    ax.legend()
-    ax.grid(True)
-
-    st.pyplot(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Descriptive Statistics")
     st.write(df_filtered[['raw_value', 'initial_projection', 'latest_projection']].describe())
